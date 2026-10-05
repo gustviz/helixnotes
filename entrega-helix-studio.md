@@ -2,8 +2,8 @@
 > Prompt Engineering para Desenvolvedores · tarefa realizada com agente de IA
 
 ## 1. Identificação
-- Aluno(a): — (preencher)
-- Turma: — (preencher)
+- Aluno(a): — Gustavo Paraiso Vizeu / André Marcelino da Silva
+- Turma: — GTI4NA
 - Data: 05/10/2026
 
 ## 2. Links do produto
