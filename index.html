@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HelixNotes — notas para quem programa</title>
+<meta name="description" content="HelixNotes é o app de notas para programadores: blocos de código que mantêm a formatação, busca instantânea e rascunho salvo enquanto você digita. Teste aqui, sem cadastro.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230E1630'/%3E%3Cpath d='M9 4c0 8 14 8 14 12S9 24 9 28M23 4c0 8-14 8-14 12s14 8 14 12' fill='none' stroke='%23FF6A3D' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --paper:#EDF0F6;
+  --card:#FFFFFF;
+  --ink:#0E1630;
+  --muted:#4A5573;
+  --line:#C9D0E0;
+  --accent:#3D35E8;
+  --signal:#FF6A3D;
+  --code-bg:#0E1630;
+  --code-ink:#E8ECF8;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:16px}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:1.0625rem;line-height:1.6;-webkit-text-size-adjust:100%}
+a{color:var(--accent)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+.skip{position:absolute;left:-999px;top:8px;background:var(--ink);color:var(--paper);padding:10px 14px;border-radius:8px;z-index:20}
+.skip:focus{left:8px}
+
+/* botões e campos */
+.sr{position:absolute;left:-999px;width:1px;height:1px;overflow:hidden}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:600 1rem var(--sans);padding:12px 20px;border-radius:10px;border:2px solid var(--ink);background:var(--ink);color:var(--paper);cursor:pointer;text-decoration:none;min-height:46px}
+.btn:hover{background:var(--accent);border-color:var(--accent)}
+.btn.ghost{background:transparent;color:var(--ink)}
+.btn.ghost:hover{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.btn.small{padding:6px 12px;min-height:36px;font-size:.9rem}
+label{display:block;font-weight:600;font-size:.95rem;margin-bottom:6px}
+input,textarea{width:100%;font:inherit;color:var(--ink);background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:11px 13px}
+input:hover,textarea:hover{border-color:var(--muted)}
+textarea{font-family:var(--mono);font-size:.95rem;line-height:1.55;resize:vertical;min-height:190px}
+
+/* topo */
+.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:18px;padding-bottom:18px;position:relative}
+.brand{font:700 1.35rem var(--serif);color:var(--ink);text-decoration:none;letter-spacing:-.01em}
+.top nav{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.top nav a:not(.btn){color:var(--ink);text-decoration:none;padding:8px 10px;border-radius:8px;font-weight:500}
+.top nav a:not(.btn):hover{background:rgba(14,22,48,.07)}
+
+/* hero */
+.hero{position:relative;overflow:hidden}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:56px;align-items:center;padding-top:56px;padding-bottom:88px;position:relative}
+h1{font:700 clamp(2.5rem,6.2vw,4.6rem)/1.02 var(--serif);letter-spacing:-.025em;text-wrap:balance}
+.lead{margin-top:22px;max-width:50ch;color:var(--muted);font-size:1.2rem}
+.hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:32px}
+.fine{margin-top:16px;color:var(--muted);font-size:.95rem}
+.helix{position:absolute;right:-30px;top:-20px;height:calc(100% + 40px);width:auto;opacity:.9;pointer-events:none}
+.helix path{fill:none;stroke-linecap:round}
+.helix .s1{stroke:var(--accent);stroke-width:3}
+.helix .s2{stroke:var(--signal);stroke-width:3}
+.helix .rung{stroke:var(--line);stroke-width:2}
+.helix .s1,.helix .s2{stroke-dasharray:1;stroke-dashoffset:1;animation:draw 2.6s cubic-bezier(.3,.6,.2,1) .2s forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+
+.quick{position:relative;background:var(--card);border:1.5px solid var(--ink);border-radius:14px;padding:20px;box-shadow:6px 6px 0 var(--ink)}
+.quick h2{font:700 1.1rem var(--serif);margin-bottom:12px}
+.quick form{display:flex;gap:8px}
+.quick input{min-width:0}
+.mini{list-style:none;margin-top:16px;display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+.mini li{display:flex;justify-content:space-between;gap:12px;font-size:.95rem;border-top:1px solid var(--line);padding-top:8px}
+.mini span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mini span:last-child{color:var(--muted);flex:none;font-size:.85rem}
+.mini .none{color:var(--muted);border:0;padding-top:0}
+
+/* seções */
+section{padding:84px 0}
+h2.sec{font:700 clamp(1.9rem,4vw,2.9rem)/1.1 var(--serif);letter-spacing:-.02em;max-width:22ch;text-wrap:balance}
+.sec-lead{margin-top:14px;max-width:56ch;color:var(--muted)}
+
+/* recursos */
+.features{background:var(--ink);color:var(--paper)}
+.features .sec-lead{color:#B9C2DC}
+.rows{margin-top:44px;border-bottom:1px solid rgba(237,240,246,.22)}
+.row{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:40px;padding:30px 0;border-top:1px solid rgba(237,240,246,.22)}
+.row h3{font:700 1.5rem/1.2 var(--serif)}
+.row p{color:#D3DAEE;max-width:58ch}
+.row code{font-family:var(--mono);font-size:.92em;background:rgba(237,240,246,.12);padding:2px 6px;border-radius:5px;color:var(--paper)}
+
+/* demo */
+.demo-grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:36px;margin-top:40px;align-items:start}
+.panel{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:22px}
+.field{margin-bottom:16px}
+.hint{font-size:.88rem;color:var(--muted);margin-top:6px}
+.hint code{font-family:var(--mono)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.msg{min-height:1.5em;margin-top:12px;font-size:.92rem;color:var(--muted)}
+.msg.err{color:#B3261E;font-weight:600}
+.list-head{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:16px}
+.list-head .search{flex:1 1 220px;min-width:0}
+.count{color:var(--muted);font-size:.92rem;margin-bottom:12px}
+#list{display:grid;gap:14px}
+.note{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:18px 20px}
+.note header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.note h3{font:700 1.2rem/1.3 var(--serif);overflow-wrap:anywhere}
+.note time{display:block;color:var(--muted);font-size:.85rem;margin-top:2px}
+.note .body{margin-top:12px;display:grid;gap:10px}
+.note .body p{white-space:pre-wrap;overflow-wrap:anywhere}
+.codebox{background:var(--code-bg);color:var(--code-ink);border-radius:10px;overflow:hidden}
+.codebox .lang{display:block;font:.78rem var(--mono);color:#9FB0DA;padding:8px 14px 0}
+.codebox pre{padding:12px 14px;overflow-x:auto;font:.9rem/1.55 var(--mono);tab-size:2}
+.empty{border:2px dashed var(--line);border-radius:14px;padding:28px;color:var(--muted);text-align:center}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 12px 10px 18px;border-radius:12px;display:flex;gap:12px;align-items:center;z-index:30;max-width:calc(100vw - 32px)}
+.toast[hidden]{display:none}
+.toast .btn{background:var(--signal);border-color:var(--signal);color:var(--ink)}
+.toast .btn:hover{background:#ff8a65;border-color:#ff8a65}
+
+/* contato */
+.contact{background:var(--card);border-top:1.5px solid var(--line);border-bottom:1.5px solid var(--line)}
+.contact .wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:48px;align-items:start}
+.mail{display:inline-block;margin-top:22px;font:700 clamp(1.3rem,3.4vw,1.9rem) var(--serif);color:var(--ink);text-decoration-color:var(--signal);text-decoration-thickness:3px;text-underline-offset:6px;overflow-wrap:anywhere}
+.mail:hover{color:var(--accent)}
+.social{list-style:none;display:grid;gap:0;margin-top:6px}
+.social li{border-top:1px solid var(--line)}
+.social li:last-child{border-bottom:1px solid var(--line)}
+.social a{display:flex;justify-content:space-between;gap:12px;padding:14px 2px;color:var(--ink);text-decoration:none;font-weight:600}
+.social a:hover{color:var(--accent)}
+.social span{color:var(--muted);font-weight:400}
+footer{padding:28px 0 40px;color:var(--muted);font-size:.92rem}
+
+@media (max-width:860px){
+  .hero-grid,.contact .wrap,.demo-grid,.row{grid-template-columns:minmax(0,1fr)}
+  .hero-grid{gap:40px;padding-bottom:64px}
+  .helix{opacity:.35;right:-90px}
+  .row{gap:10px;padding:24px 0}
+  section{padding:60px 0}
+}
+@media (max-width:520px){
+  body{font-size:1rem}
+  .top nav a:not(.btn){display:none}
+  .quick form{flex-direction:column}
+  .quick{box-shadow:4px 4px 0 var(--ink)}
+  .hero-actions .btn{flex:1 1 100%}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .helix .s1,.helix .s2{animation:none;stroke-dashoffset:0}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#demo">Ir para a demonstração</a>
+
+<div class="hero" id="topo">
+  <svg class="helix" viewBox="0 0 400 560" preserveAspectRatio="xMaxYMid meet" aria-hidden="true" focusable="false">
+    <g><path class="rung" d="M224.7 14 L175.3 14"/><path class="rung" d="M264.7 42 L135.3 42"/><path class="rung" d="M280.0 70 L120.0 70"/><path class="rung" d="M264.7 98 L135.3 98"/><path class="rung" d="M224.7 126 L175.3 126"/><path class="rung" d="M175.3 154 L224.7 154"/><path class="rung" d="M135.3 182 L264.7 182"/><path class="rung" d="M120.0 210 L280.0 210"/><path class="rung" d="M135.3 238 L264.7 238"/><path class="rung" d="M175.3 266 L224.7 266"/><path class="rung" d="M224.7 294 L175.3 294"/><path class="rung" d="M264.7 322 L135.3 322"/><path class="rung" d="M280.0 350 L120.0 350"/><path class="rung" d="M264.7 378 L135.3 378"/><path class="rung" d="M224.7 406 L175.3 406"/><path class="rung" d="M175.3 434 L224.7 434"/><path class="rung" d="M135.3 462 L264.7 462"/><path class="rung" d="M120.0 490 L280.0 490"/><path class="rung" d="M135.3 518 L264.7 518"/><path class="rung" d="M175.3 546 L224.7 546"/></g>
+    <path class="s1" pathLength="1" d="M200.0 0 L209.0 5 L217.8 10 L226.4 15 L234.7 20 L242.6 25 L249.9 30 L256.6 35 L262.5 40 L267.7 45 L272.1 50 L275.5 55 L278.0 60 L279.5 65 L280.0 70 L279.5 75 L278.0 80 L275.5 85 L272.1 90 L267.7 95 L262.5 100 L256.6 105 L249.9 110 L242.6 115 L234.7 120 L226.4 125 L217.8 130 L209.0 135 L200.0 140 L191.0 145 L182.2 150 L173.6 155 L165.3 160 L157.4 165 L150.1 170 L143.4 175 L137.5 180 L132.3 185 L127.9 190 L124.5 195 L122.0 200 L120.5 205 L120.0 210 L120.5 215 L122.0 220 L124.5 225 L127.9 230 L132.3 235 L137.5 240 L143.4 245 L150.1 250 L157.4 255 L165.3 260 L173.6 265 L182.2 270 L191.0 275 L200.0 280 L209.0 285 L217.8 290 L226.4 295 L234.7 300 L242.6 305 L249.9 310 L256.6 315 L262.5 320 L267.7 325 L272.1 330 L275.5 335 L278.0 340 L279.5 345 L280.0 350 L279.5 355 L278.0 360 L275.5 365 L272.1 370 L267.7 375 L262.5 380 L256.6 385 L249.9 390 L242.6 395 L234.7 400 L226.4 405 L217.8 410 L209.0 415 L200.0 420 L191.0 425 L182.2 430 L173.6 435 L165.3 440 L157.4 445 L150.1 450 L143.4 455 L137.5 460 L132.3 465 L127.9 470 L124.5 475 L122.0 480 L120.5 485 L120.0 490 L120.5 495 L122.0 500 L124.5 505 L127.9 510 L132.3 515 L137.5 520 L143.4 525 L150.1 530 L157.4 535 L165.3 540 L173.6 545 L182.2 550 L191.0 555 L200.0 560"/>
+    <path class="s2" pathLength="1" d="M200.0 0 L191.0 5 L182.2 10 L173.6 15 L165.3 20 L157.4 25 L150.1 30 L143.4 35 L137.5 40 L132.3 45 L127.9 50 L124.5 55 L122.0 60 L120.5 65 L120.0 70 L120.5 75 L122.0 80 L124.5 85 L127.9 90 L132.3 95 L137.5 100 L143.4 105 L150.1 110 L157.4 115 L165.3 120 L173.6 125 L182.2 130 L191.0 135 L200.0 140 L209.0 145 L217.8 150 L226.4 155 L234.7 160 L242.6 165 L249.9 170 L256.6 175 L262.5 180 L267.7 185 L272.1 190 L275.5 195 L278.0 200 L279.5 205 L280.0 210 L279.5 215 L278.0 220 L275.5 225 L272.1 230 L267.7 235 L262.5 240 L256.6 245 L249.9 250 L242.6 255 L234.7 260 L226.4 265 L217.8 270 L209.0 275 L200.0 280 L191.0 285 L182.2 290 L173.6 295 L165.3 300 L157.4 305 L150.1 310 L143.4 315 L137.5 320 L132.3 325 L127.9 330 L124.5 335 L122.0 340 L120.5 345 L120.0 350 L120.5 355 L122.0 360 L124.5 365 L127.9 370 L132.3 375 L137.5 380 L143.4 385 L150.1 390 L157.4 395 L165.3 400 L173.6 405 L182.2 410 L191.0 415 L200.0 420 L209.0 425 L217.8 430 L226.4 435 L234.7 440 L242.6 445 L249.9 450 L256.6 455 L262.5 460 L267.7 465 L272.1 470 L275.5 475 L278.0 480 L279.5 485 L280.0 490 L279.5 495 L278.0 500 L275.5 505 L272.1 510 L267.7 515 L262.5 520 L256.6 525 L249.9 530 L242.6 535 L234.7 540 L226.4 545 L217.8 550 L209.0 555 L200.0 560"/>
+  </svg>
+  <header class="wrap top">
+    <a class="brand" href="#topo">HelixNotes</a>
+    <nav aria-label="Principal">
+      <a href="#recursos">Recursos</a>
+      <a href="#contato">Contato</a>
+      <a class="btn small" href="#demo">Testar agora</a>
+    </nav>
+  </header>
+
+  <div class="wrap hero-grid">
+    <div>
+      <h1>As notas do seu dia de código, no lugar certo.</h1>
+      <p class="lead">HelixNotes é o app de notas para quem programa. Cole um comando, um trecho ou uma ideia, e encontre tudo de novo em segundos.</p>
+      <div class="hero-actions">
+        <a class="btn" href="#demo">Testar a demonstração</a>
+        <a class="btn ghost" href="#recursos">Ver recursos</a>
+      </div>
+      <p class="fine">Sem cadastro. A demonstração funciona agora, aqui na página.</p>
+    </div>
+    <aside class="quick" aria-labelledby="quick-t">
+      <h2 id="quick-t">Anote algo agora</h2>
+      <form id="quickForm">
+        <label for="quickInput" class="sr">Título da nota</label>
+        <input id="quickInput" type="text" maxlength="80" placeholder="ex.: limpar branches" autocomplete="off">
+        <button class="btn" type="submit">Salvar</button>
+      </form>
+      <ul class="mini" id="mini" aria-label="Últimas notas"></ul>
+    </aside>
+  </div>
+</div>
+
+<main id="principal">
+  <section class="features" id="recursos" aria-labelledby="rec-t">
+    <div class="wrap">
+      <h2 class="sec" id="rec-t">Feito para o jeito que programadores anotam</h2>
+      <p class="sec-lead">Quatro coisas que o HelixNotes faz bem. Todas funcionam na demonstração logo abaixo.</p>
+      <div class="rows">
+        <div class="row">
+          <h3>Código sem estragar a formatação</h3>
+          <p>Abra e feche um trecho com <code>```</code> e ele aparece em bloco, com a indentação intacta e rolagem lateral para linhas longas. Se a primeira linha for o nome da linguagem, ela vira o rótulo do bloco.</p>
+        </div>
+        <div class="row">
+          <h3>Busca que responde enquanto você digita</h3>
+          <p>A lista filtra a cada tecla, no título e no texto da nota. Lembrou só de uma palavra do comando? Digite e a nota aparece.</p>
+        </div>
+        <div class="row">
+          <h3>Rascunho salvo automaticamente</h3>
+          <p>Fechou a aba no meio de uma nota? O texto que você estava escrevendo volta quando você abrir a página de novo.</p>
+        </div>
+        <div class="row">
+          <h3>Suas notas ficam com você</h3>
+          <p>Nada é enviado a servidor nenhum: as notas ficam guardadas no seu navegador. Excluiu sem querer? Você tem alguns segundos para desfazer.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="demo" aria-labelledby="demo-t">
+    <div class="wrap">
+      <h2 class="sec" id="demo-t">Teste com suas próprias notas</h2>
+      <p class="sec-lead">Crie, pesquise e exclua notas. Recarregue a página: elas continuam aqui.</p>
+
+      <div class="demo-grid">
+        <form class="panel" id="noteForm" novalidate>
+          <div class="field">
+            <label for="title">Título</label>
+            <input id="title" type="text" maxlength="80" autocomplete="off" placeholder="ex.: desfazer o último commit">
+          </div>
+          <div class="field">
+            <label for="body">Nota</label>
+            <textarea id="body" aria-describedby="bodyHint" placeholder="Escreva o texto. Para código, abra um bloco com três crases."></textarea>
+            <p class="hint" id="bodyHint">Código vai entre <code>```</code> e <code>```</code>. Ctrl+Enter salva.</p>
+          </div>
+          <div class="actions">
+            <button class="btn" type="submit">Salvar nota</button>
+            <button class="btn ghost" type="button" id="clearBtn">Limpar campos</button>
+          </div>
+          <p class="msg" id="formMsg" role="status" aria-live="polite"></p>
+        </form>
+
+        <div>
+          <div class="list-head">
+            <div class="search">
+              <label for="search" class="sr">Buscar nas notas</label>
+              <input id="search" type="search" placeholder="Buscar nas notas" autocomplete="off">
+            </div>
+          </div>
+          <p class="count" id="count" role="status" aria-live="polite"></p>
+          <div id="list"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="contact" id="contato" aria-labelledby="ct-t">
+    <div class="wrap">
+      <div>
+        <h2 class="sec" id="ct-t">Quer o HelixNotes no seu time?</h2>
+        <p class="sec-lead">Escreva para a Marina e o time da Helix Studio. A resposta sai em até um dia útil.</p>
+        <a class="mail" href="mailto:ola@helixstudio.example">ola@helixstudio.example</a>
+      </div>
+      <ul class="social" aria-label="Redes sociais">
+        <li><a href="https://github.com/" rel="noopener" target="_blank">GitHub <span>@helixstudio</span></a></li>
+        <li><a href="https://www.linkedin.com/" rel="noopener" target="_blank">LinkedIn <span>Helix Studio</span></a></li>
+        <li><a href="https://x.com/" rel="noopener" target="_blank">X <span>@helixstudio</span></a></li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">© 2026 Helix Studio. HelixNotes é um produto em lançamento.</div>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden>
+  <span id="toastText"></span>
+  <button class="btn small" type="button" id="undoBtn">Desfazer</button>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var KEY = 'helixnotes_v1', DRAFT = 'helixnotes_draft_v1', SEEDED = 'helixnotes_seeded_v1';
+  var storageOk = true;
+
+  function read(k, fallback) {
+    try { var v = localStorage.getItem(k); return v === null ? fallback : JSON.parse(v); }
+    catch (e) { storageOk = false; return fallback; }
+  }
+  function write(k, v) {
+    try { localStorage.setItem(k, JSON.stringify(v)); return true; }
+    catch (e) { storageOk = false; return false; }
+  }
+  function $(s) { return document.querySelector(s); }
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+
+  /* ---------- dados ---------- */
+  var notes = read(KEY, []);
+  if (!Array.isArray(notes)) notes = [];
+  notes = notes.filter(function (n) {
+    return n && typeof n.id === 'string' && typeof n.title === 'string' && typeof n.body === 'string' && typeof n.ts === 'number';
+  });
+
+  if (!read(SEEDED, false) && notes.length === 0) {
+    var now = Date.now();
+    notes = [
+      { id: 'seed-2', ts: now - 3600000, title: 'Debounce em poucas linhas',
+        body: 'Espera o usuário parar de digitar antes de chamar a API.\n```javascript\nfunction debounce(fn, ms) {\n  let t;\n  return function (...args) {\n    clearTimeout(t);\n    t = setTimeout(() => fn.apply(this, args), ms);\n  };\n}\n```' },
+      { id: 'seed-1', ts: now - 86400000, title: 'Desfazer o último commit sem perder o trabalho',
+        body: 'As alterações voltam para a área de staging:\n```bash\ngit reset --soft HEAD~1\n```' }
+    ];
+    write(KEY, notes);
+  }
+  write(SEEDED, true);
+
+  function persist() { write(KEY, notes); }
+  function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+  /* ---------- exibição ---------- */
+  var listEl = $('#list'), countEl = $('#count'), miniEl = $('#mini'), searchEl = $('#search');
+
+  function fmt(ts) {
+    try { return new Date(ts).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); }
+    catch (e) { return ''; }
+  }
+
+  function renderBody(text) {
+    var wrap = el('div', 'body');
+    var parts = text.split('```');
+    parts.forEach(function (part, i) {
+      if (i % 2 === 1) {
+        var lines = part.replace(/^\n+|\n+$/g, '').split('\n');
+        var lang = '';
+        if (lines.length > 1 && /^[A-Za-z][\w+#.-]{0,19}$/.test(lines[0].trim())) lang = lines.shift().trim();
+        var box = el('div', 'codebox');
+        if (lang) box.appendChild(el('span', 'lang', lang));
+        var pre = el('pre');
+        pre.appendChild(el('code', '', lines.join('\n')));
+        pre.tabIndex = 0;
+        pre.setAttribute('aria-label', 'Trecho de código' + (lang ? ' em ' + lang : ''));
+        box.appendChild(pre);
+        wrap.appendChild(box);
+      } else {
+        var t = part.trim();
+        if (t) wrap.appendChild(el('p', '', t));
+      }
+    });
+    return wrap;
+  }
+
+  function matches(n, q) {
+    return !q || (n.title + '\n' + n.body).toLowerCase().indexOf(q) !== -1;
+  }
+
+  function render() {
+    var q = searchEl.value.trim().toLowerCase();
+    var shown = notes.filter(function (n) { return matches(n, q); });
+    listEl.textContent = '';
+
+    if (notes.length === 0) {
+      listEl.appendChild(el('p', 'empty', 'Você ainda não tem notas. Escreva a primeira no formulário.'));
+    } else if (shown.length === 0) {
+      listEl.appendChild(el('p', 'empty', 'Nenhuma nota encontrada para “' + searchEl.value.trim() + '”. Tente outra palavra.'));
+    }
+
+    shown.forEach(function (n) {
+      var art = el('article', 'note');
+      var head = el('header');
+      var info = el('div');
+      info.appendChild(el('h3', '', n.title || 'Sem título'));
+      info.appendChild(el('time', '', fmt(n.ts)));
+      var del = el('button', 'btn ghost small', 'Excluir');
+      del.type = 'button';
+      del.setAttribute('aria-label', 'Excluir a nota ' + (n.title || 'sem título'));
+      del.addEventListener('click', function () { removeNote(n.id); });
+      head.appendChild(info);
+      head.appendChild(del);
+      art.appendChild(head);
+      if (n.body) art.appendChild(renderBody(n.body));
+      listEl.appendChild(art);
+    });
+
+    var total = notes.length;
+    var msg = q ? shown.length + ' de ' + total + (total === 1 ? ' nota' : ' notas') : total + (total === 1 ? ' nota' : ' notas');
+    if (!storageOk) msg += '. Seu navegador bloqueou o armazenamento: as notas valem só até fechar a página.';
+    countEl.textContent = total ? msg : '';
+
+    miniEl.textContent = '';
+    if (!total) miniEl.appendChild(el('li', 'none', 'Nenhuma nota ainda.'));
+    notes.slice(0, 3).forEach(function (n) {
+      var li = el('li');
+      li.appendChild(el('span', '', n.title || 'Sem título'));
+      li.appendChild(el('span', '', fmt(n.ts)));
+      miniEl.appendChild(li);
+    });
+  }
+
+  /* ---------- ações ---------- */
+  var lastDeleted = null, toastTimer = null;
+  var toast = $('#toast'), toastText = $('#toastText'), undoBtn = $('#undoBtn');
+
+  function showToast(text, withUndo) {
+    toastText.textContent = text;
+    undoBtn.hidden = !withUndo;
+    toast.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toast.hidden = true; lastDeleted = null; }, 7000);
+  }
+
+  function addNote(title, body) {
+    notes.unshift({ id: newId(), ts: Date.now(), title: title, body: body });
+    persist();
+    render();
+  }
+
+  function removeNote(id) {
+    var idx = notes.findIndex(function (n) { return n.id === id; });
+    if (idx === -1) return;
+    lastDeleted = { note: notes[idx], index: idx };
+    notes.splice(idx, 1);
+    persist();
+    render();
+    showToast('Nota excluída.', true);
+  }
+
+  undoBtn.addEventListener('click', function () {
+    if (!lastDeleted) return;
+    notes.splice(Math.min(lastDeleted.index, notes.length), 0, lastDeleted.note);
+    lastDeleted = null;
+    persist();
+    render();
+    showToast('Nota restaurada.', false);
+  });
+
+  /* formulário principal + rascunho automático */
+  var form = $('#noteForm'), titleEl = $('#title'), bodyEl = $('#body'), formMsg = $('#formMsg');
+  var draftTimer = null;
+
+  function setMsg(text, isErr) {
+    formMsg.textContent = text;
+    formMsg.className = 'msg' + (isErr ? ' err' : '');
+  }
+
+  var draft = read(DRAFT, null);
+  if (draft && typeof draft === 'object' && (draft.title || draft.body)) {
+    titleEl.value = typeof draft.title === 'string' ? draft.title : '';
+    bodyEl.value = typeof draft.body === 'string' ? draft.body : '';
+    setMsg('Rascunho anterior recuperado.', false);
+  }
+
+  function saveDraft() {
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(function () {
+      if (!titleEl.value && !bodyEl.value) { try { localStorage.removeItem(DRAFT); } catch (e) {} return; }
+      if (write(DRAFT, { title: titleEl.value, body: bodyEl.value })) setMsg('Rascunho salvo.', false);
+    }, 400);
+  }
+  titleEl.addEventListener('input', saveDraft);
+  bodyEl.addEventListener('input', saveDraft);
+
+  function clearForm() {
+    clearTimeout(draftTimer);
+    titleEl.value = '';
+    bodyEl.value = '';
+    try { localStorage.removeItem(DRAFT); } catch (e) {}
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var t = titleEl.value.trim(), b = bodyEl.value.trim();
+    if (!t && !b) {
+      setMsg('Escreva um título ou um texto antes de salvar.', true);
+      titleEl.focus();
+      return;
+    }
+    addNote(t, b);
+    clearForm();
+    setMsg('Nota salva.', false);
+    titleEl.focus();
+  });
+
+  bodyEl.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); form.requestSubmit(); }
+  });
+
+  $('#clearBtn').addEventListener('click', function () {
+    clearForm();
+    setMsg('Campos limpos.', false);
+    titleEl.focus();
+  });
+
+  searchEl.addEventListener('input', render);
+
+  /* captura rápida do topo: usa a mesma lista da demonstração */
+  $('#quickForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var input = $('#quickInput'), t = input.value.trim();
+    if (!t) { input.focus(); return; }
+    addNote(t, '');
+    input.value = '';
+    showToast('Nota salva. Ela já aparece na demonstração.', false);
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
